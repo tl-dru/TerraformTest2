@@ -20,8 +20,6 @@ permissions:
 
 
 
-
-
 jobs:
   terraform:
     name: 'Terraform'
