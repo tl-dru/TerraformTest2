@@ -3,7 +3,7 @@
 # Azure Terraform Backend Setup Script
 # This script creates a service principal, resource group, and storage account for Terraform state management
 
-set -e
+set -e -o pipefail
 
 # Configuration variables
 RESOURCE_GROUP_NAME="${RESOURCE_GROUP_NAME:-terraform-state-rg}"
@@ -25,16 +25,44 @@ echo "Getting subscription ID..."
 SUBSCRIPTION_ID=$(az account show --query id -o tsv)
 echo "Subscription ID: $SUBSCRIPTION_ID"
 
-# Create service principal
+# Create or use existing service principal
 echo ""
-echo "Creating service principal..."
-SP_OUTPUT=$(az ad sp create-for-rbac --name "$SP_NAME" --role Contributor --scopes "/subscriptions/$SUBSCRIPTION_ID" --output json)
+echo "Checking for existing service principal..."
+EXISTING_SP=$(az ad sp list --display-name "$SP_NAME" --query '[0].appId' -o tsv 2>/dev/null || echo "")
 
-CLIENT_ID=$(echo "$SP_OUTPUT" | jq -r '.appId')
-CLIENT_SECRET=$(echo "$SP_OUTPUT" | jq -r '.password')
-TENANT_ID=$(echo "$SP_OUTPUT" | jq -r '.tenant')
+if [ -n "$EXISTING_SP" ]; then
+  echo "Service principal '$SP_NAME' already exists"
+  CLIENT_ID="$EXISTING_SP"
+  TENANT_ID=$(az account show --query tenantId -o tsv)
 
-echo "Service Principal created successfully"
+  # Reset credentials for existing SP
+  echo "Resetting credentials for existing service principal..."
+  SP_OUTPUT=$(az ad sp credential reset --id "$CLIENT_ID" --output json)
+  CLIENT_SECRET=$(echo "$SP_OUTPUT" | jq -r '.password')
+
+  # Ensure Contributor role is assigned
+  echo "Ensuring Contributor role assignment..."
+  az role assignment create \
+    --assignee "$CLIENT_ID" \
+    --role Contributor \
+    --scope "/subscriptions/$SUBSCRIPTION_ID" \
+    2>/dev/null || echo "Role assignment already exists or failed (this may be ok)"
+else
+  echo "Creating new service principal..."
+  SP_OUTPUT=$(az ad sp create-for-rbac --name "$SP_NAME" --role Contributor --scopes "/subscriptions/$SUBSCRIPTION_ID" --output json 2>&1)
+
+  if echo "$SP_OUTPUT" | grep -q "ERROR"; then
+    echo "Error creating service principal:"
+    echo "$SP_OUTPUT"
+    exit 1
+  fi
+
+  CLIENT_ID=$(echo "$SP_OUTPUT" | jq -r '.appId')
+  CLIENT_SECRET=$(echo "$SP_OUTPUT" | jq -r '.password')
+  TENANT_ID=$(echo "$SP_OUTPUT" | jq -r '.tenant')
+fi
+
+echo "Service Principal ready"
 echo "Client ID: $CLIENT_ID"
 
 # Wait for service principal propagation
@@ -42,10 +70,10 @@ echo ""
 echo "Waiting for service principal to propagate..."
 sleep 30
 
-# Create resource group
+# Create resource group if it doesn't exist
 echo ""
 echo "Creating resource group..."
-az group create --name "$RESOURCE_GROUP_NAME" --location "$LOCATION"
+az group create --name "$RESOURCE_GROUP_NAME" --location "$LOCATION" 2>/dev/null || echo "Resource group already exists"
 
 # Create storage account
 echo ""
@@ -86,7 +114,8 @@ STORAGE_ACCOUNT_ID=$(az storage account show \
 az role assignment create \
   --assignee "$CLIENT_ID" \
   --role "Storage Blob Data Contributor" \
-  --scope "$STORAGE_ACCOUNT_ID"
+  --scope "$STORAGE_ACCOUNT_ID" \
+  2>/dev/null || echo "Storage role assignment already exists or failed (this may be ok)"
 
 # Output configuration
 echo ""
