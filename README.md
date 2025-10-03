@@ -1,6 +1,6 @@
 # TerraformTest
 
-[![Terraform](https://img.shields.io/badge/Terraform-v1.0+-623CE4?logo=terraform&logoColor=white)](https://www.terraform.io/)
+[![Terraform](https://img.shields.io/badge/Terraform-v1.13+-623CE4?logo=terraform&logoColor=white)](https://www.terraform.io/)
 [![Azure](https://img.shields.io/badge/Azure-Cloud-0078D4?logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/)
 [![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/features/actions)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -21,7 +21,7 @@ A production-ready CI/CD pipeline for Azure infrastructure automation using Terr
 
 - Azure subscription
 - [Azure CLI](https://docs.microsoft.com/cli/azure/install-azure-cli) installed
-- [Terraform](https://www.terraform.io/downloads) v1.0+ installed
+- [Terraform](https://www.terraform.io/downloads) v1.13+ installed
 - GitHub repository with Actions enabled
 - `jq` for JSON parsing (optional)
 
