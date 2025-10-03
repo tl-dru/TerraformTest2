@@ -4,8 +4,9 @@
 
 ### Authenticating to Azure using Service Principle
 
-1. Use service principle (because we can't log in interactively from a script running automatically)
-2. Use --auto-approve (because we can't interactively answer yes)
+1. Use backend for state storage (because we want to share state between runs)
+2. Use service principle (because we can't log in interactively from a script running automatically)
+3. Use --auto-approve (because we can't interactively answer yes)
 
 #### Create Service Principle and Authenticate to Azure
 
